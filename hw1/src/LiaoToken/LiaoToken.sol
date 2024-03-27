@@ -18,10 +18,18 @@ contract LiaoToken is IERC20 {
     mapping(address account => uint256) private _balances;
     mapping(address account => bool) isClaim;
 
+    mapping(address account => uint256) private _allowanceOut; // value to allowance for someone
+    mapping(address account => uint256) private _allowance; // value of allowance from someone
+    mapping(address account => address) private _spender; // who own your approval and can use your allowance
+
     uint256 private _totalSupply;
 
     string private _name;
     string private _symbol;
+
+    error transfer_notEnoughBalance();
+    error transfer_notEnoughAllowance();
+    error approve_notEnoughBalance();
 
     event Claim(address indexed user, uint256 indexed amount);
 
@@ -60,17 +68,43 @@ contract LiaoToken is IERC20 {
 
     function transfer(address to, uint256 amount) external returns (bool) {
         // TODO: please add your implementaiton here
+        if(amount > _balances[msg.sender]){
+            revert transfer_notEnoughBalance();
+        }
+        _balances[msg.sender] -= amount;
+        _balances[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+        return true;
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
         // TODO: please add your implementaiton here
+        if(value > (_balances[from]-_allowanceOut[from])){
+            revert transfer_notEnoughAllowance();
+        }else if(value > _balances[from]){
+            revert transfer_notEnoughBalance();
+        }
+        _balances[from] -= value;
+        _balances[to] += value;
+        emit Transfer(from, to, value);
+        return true;
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
         // TODO: please add your implementaiton here
+        if(amount > _balances[spender]){
+            revert approve_notEnoughBalance();
+        }
+        _allowanceOut[spender] = amount;
+        _spender[msg.sender] = spender;
+        _allowance[msg.sender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
     }
 
     function allowance(address owner, address spender) public view returns (uint256) {
         // TODO: please add your implementaiton here
+        assert(spender == _spender[owner]);
+        return _allowance[owner];
     }
 }
